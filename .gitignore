@@ -1,0 +1,32 @@
+# Node / Expo
+node_modules/
+.expo/
+dist/
+App_Filter/
+*.log
+npm-debug.*
+
+# Android build outputs
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.cxx/
+*.keystore
+!android/app/debug.keystore
+
+# iOS (if generated later)
+ios/Pods/
+ios/build/
+*.ipa
+
+# Environment / secrets
+.env
+.env.*
+
+# System
+.DS_Store
+Thumbs.db
+
+# Test data / temp
+*.tmp

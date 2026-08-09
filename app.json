@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Football_Challenge",
+    "slug": "defi-foot",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.devicedefifoot",
+      "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera for football challenges.",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs camera access to film football challenges.",
+        "NSPhotoLibraryUsageDescription": "This app needs photo library access to import player photos."
+      }
+    },
+    "android": {
+      "package": "com.devicedefifoot",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PROJECTION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos for importing player images."
+        }
+      ],
+      [
+        "expo-file-system",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos for importing player images."
+        }
+      ],
+      "expo-sqlite",
+      "expo-asset",
+      "expo-font"
+    ],
+    "scheme": "defi-foot"
+  }
+}
