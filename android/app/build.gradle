@@ -93,6 +93,12 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
+        // Without this, -PreactNativeArchitectures only affects autolinking and
+        // every ABI from every dependency still lands in the APK.
+        ndk {
+            abiFilters(*((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86,x86_64')
+                .toString().split(',')))
+        }
     }
     signingConfigs {
         debug {

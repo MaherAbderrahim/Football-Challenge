@@ -1,12 +1,129 @@
 import * as SQLite from 'expo-sqlite';
-import { Category, Player, MultiplierModel, ChallengeConfig } from '../types';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Player, MultiplierModel, ChallengeConfig, Category } from '../types';
+import { PLAYER_ASSETS } from '../data/playerAssets';
+import {
+  TM_CATEGORY_ID, TM_CATEGORY_NAME,
+  TM_MODEL_ID, TM_MODEL_NAME, TM_MODEL_DISTRIBUTION,
+  TM_CONFIG_ID, TM_CONFIG_NAME, TM_CONFIG_LAYOUT, TM_CONFIG_FRAME_STYLE,
+  TM_IMAGES,
+} from '../data/transfertMarketFilter';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
+// v2: the Transfert Market filter added 193 bundled photos that must be copied
+// over on installs already seeded with v1.
+const SEED_FLAG_KEY = 'bundled_seed_done_v2';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const BUNDLED_DB_ASSET = require('../../assets/db/defifoot.db');
+
+/**
+ * First-launch seeding: copies the bundled database (category "Joueur Arabe",
+ * 124 players, multiplier model + challenge config "Hot_hetha") into the app's
+ * SQLite folder, and copies the 124 player photos to player_images/<category>.
+ * The image_uri values stored in the DB point to
+ * file:///data/user/0/<package>/files/player_images/... which is valid on any
+ * device because the applicationId is identical.
+ */
+async function ensureBundledDb() {
+  try {
+    const dir = `${FileSystem.documentDirectory}SQLite/`;
+    const target = `${dir}defifoot.db`;
+    const info = await FileSystem.getInfoAsync(target);
+    if (info.exists) return;
+    const asset = Asset.fromModule(BUNDLED_DB_ASSET);
+    await asset.downloadAsync();
+    if (!asset.localUri) return;
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    await FileSystem.copyAsync({ from: asset.localUri, to: target });
+  } catch (e) {
+    console.warn('bundled db copy failed', e);
+  }
+}
+
+async function ensurePlayerImages(database: SQLite.SQLiteDatabase) {
+  try {
+    const flag = await AsyncStorage.getItem(SEED_FLAG_KEY);
+    if (flag) return;
+    const rows = await database.getAllAsync<{ category_id: string; image_uri: string }>(
+      'SELECT category_id, image_uri FROM players WHERE image_uri LIKE ?',
+      ['%player_images/%']
+    );
+    for (const row of rows) {
+      const filename = row.image_uri.split('/').pop();
+      if (!filename) continue;
+      const moduleId = PLAYER_ASSETS[filename];
+      if (!moduleId) continue;
+      const asset = Asset.fromModule(moduleId);
+      await asset.downloadAsync();
+      if (!asset.localUri) continue;
+      const dir = `${FileSystem.documentDirectory}player_images/${row.category_id}/`;
+      const dest = `${dir}${filename}`;
+      const fileInfo = await FileSystem.getInfoAsync(dest);
+      if (fileInfo.exists) continue;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      await FileSystem.copyAsync({ from: asset.localUri, to: dest });
+    }
+    await AsyncStorage.setItem(SEED_FLAG_KEY, '1');
+  } catch (e) {
+    console.warn('player image seed failed', e);
+  }
+}
+
+/**
+ * Second filter ("Transfert Market"): inserted directly into the live database
+ * rather than into assets/db/defifoot.db, because ensureBundledDb() keeps the
+ * device's existing database and re-copying it would wipe the user's configs.
+ * Idempotent: skipped once the category row exists.
+ */
+async function ensureTransfertMarketFilter(database: SQLite.SQLiteDatabase) {
+  try {
+    const existing = await database.getFirstAsync<{ id: string }>(
+      'SELECT id FROM categories WHERE id = ?',
+      [TM_CATEGORY_ID]
+    );
+    if (existing) return;
+
+    await database.runAsync(
+      'INSERT OR IGNORE INTO categories (id, name) VALUES (?, ?)',
+      TM_CATEGORY_ID, TM_CATEGORY_NAME
+    );
+    await database.runAsync(
+      'INSERT OR IGNORE INTO multiplier_models (id, name, distribution) VALUES (?, ?, ?)',
+      TM_MODEL_ID, TM_MODEL_NAME, JSON.stringify(TM_MODEL_DISTRIBUTION)
+    );
+
+    const dir = `${FileSystem.documentDirectory}player_images/${TM_CATEGORY_ID}/`;
+    const args: (string | number)[] = [];
+    const tuples = TM_IMAGES.map(file => {
+      args.push(file, TM_CATEGORY_ID, `${dir}${file}`, 1);
+      return '(?, ?, ?, ?)';
+    });
+    await database.runAsync(
+      `INSERT OR IGNORE INTO players (id, category_id, image_uri, odds) VALUES ${tuples.join(', ')}`,
+      ...args
+    );
+
+    await database.runAsync(
+      'INSERT OR IGNORE INTO challenge_configs (id, name, category_id, multiplier_model_id, layout, text_blocks, frame_style) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      TM_CONFIG_ID, TM_CONFIG_NAME, TM_CATEGORY_ID, TM_MODEL_ID,
+      JSON.stringify(TM_CONFIG_LAYOUT), '[]', TM_CONFIG_FRAME_STYLE
+    );
+  } catch (e) {
+    console.warn('transfert market filter seed failed', e);
+  }
+}
+
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
+  await ensureBundledDb();
   db = await SQLite.openDatabaseAsync('defifoot.db');
   await initDatabase(db);
+  await ensureTransfertMarketFilter(db);
+  await ensurePlayerImages(db).catch(e => console.warn(e));
   return db;
 }
 
