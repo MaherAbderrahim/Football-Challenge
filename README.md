@@ -2,6 +2,19 @@
 
 Application mobile (React Native / Expo) pour créer des **vidéos de défis de foot** avec un filtre réel : sélection aléatoire animée de joueurs, cotes de multiplicateurs et enregistrement vidéo du rendu final — pensé pour les réseaux sociaux.
 
+## 📲 Installer sur Android
+
+<img src="docs/installer.png" width="320" alt="QR code d'installation de Football Challenge" />
+
+Scanner ce QR avec l'appareil photo du téléphone, ou télécharger directement
+[l'APK](https://github.com/MaherAbderrahim/Football-Challenge/releases/download/v1.0.0/Football-Challenge-v1.0.0.apk) (76 Mo).
+
+1. Le navigateur télécharge le fichier. Chrome avertit que le fichier « peut être nuisible » : c'est un APK signé avec le keystore de debug Expo, absent du Play Store — accepter le téléchargement.
+2. Ouvrir la notification de téléchargement, puis **Installer** (Android demande d'autoriser les sources inconnues pour Chrome).
+3. Autoriser la **caméra** à la première ouverture.
+
+Compatible **Android 8+** sur téléphone **64 bits (arm64-v8a)**. Deux filtres inclus : *Joueur Arabe* (124 joueurs) et *Transfert Market* (193 cartes joueur + valeur marché).
+
 ## ✨ Fonctionnalités
 
 - 🎲 **Tirage aléatoire avec remise** : à chaque appui, un joueur est choisi au hasard parmi **tous** les joueurs disponibles. Les répétitions sont autorisées et normales (la liste n'est jamais modifiée).
